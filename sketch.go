@@ -8,13 +8,118 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Returns a pointer to the MapItem with the corresponding Key.
+func findKey(ms yaml.MapSlice, key string) *yaml.MapItem {
+	for idx, _ := range ms {
+		kv := &ms[idx]
+		if kv.Key == key {
+			return kv
+		}
+	}
+	return nil
+}
+
+func ensureIsSecret(data yaml.MapSlice) error {
+	kv := findKey(data, "kind")
+	if kv == nil {
+		return fmt.Errorf("Yaml file does not have a `kind`")
+	}
+
+	kind, ok := kv.Value.(string)
+	if !ok {
+		return fmt.Errorf("Yaml file `kind` is %#v, expected string", kv.Value)
+	}
+	if kind != "Secret" {
+		return fmt.Errorf("Yaml file `kind` is %q, expected 'Secret'", kind)
+	}
+	return nil
+}
+
+// A callback which munges a yaml.MapItem in-place.
+type secretDataMunger func(kv *yaml.MapItem) error
+
+func secretDataDecoder(kv *yaml.MapItem) error {
+	secret, ok := kv.Value.(string)
+	if !ok {
+		return fmt.Errorf("Secret %q is %#v, expected string", kv.Value)
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(secret)
+	if err != nil {
+		return fmt.Errorf("Secret $q is %#v, failed to decode base64", kv.Value)
+	}
+
+	kv.Value = string(decoded)
+	return nil
+}
+
+func secretDataEncoder(kv *yaml.MapItem) error {
+	secret, ok := kv.Value.(string)
+	if !ok {
+		return fmt.Errorf("Secret %q is %#v, expected string", kv.Value)
+	}
+
+	kv.Value = base64.StdEncoding.EncodeToString([]byte(secret))
+	return nil
+}
+
+// Applies a secretDataMunger to all values in data
+func mapAcrossData(data yaml.MapSlice, fn secretDataMunger) error {
+	for idx, _ := range data {
+		if err := fn(&data[idx]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Decodes the data in-place. Arg is the root yaml struct.
+func decodeSecretData(data yaml.MapSlice) error {
+	if err := ensureIsSecret(data); err != nil {
+		return err
+	}
+
+	kv := findKey(data, "data")
+	if kv == nil {
+		return fmt.Errorf("Yaml file does not have a `data`?")
+	}
+
+	secretData, ok := kv.Value.(yaml.MapSlice)
+	if !ok {
+		return fmt.Errorf("Yaml file `data` is %#v, expected MapSlice", kv.Value)
+	}
+
+	return mapAcrossData(secretData, secretDataDecoder)
+}
+
+func encodeSecretData(data yaml.MapSlice) error {
+	if err := ensureIsSecret(data); err != nil {
+		return err
+	}
+
+	kv := findKey(data, "data")
+	if kv == nil {
+		return fmt.Errorf("Yaml file does not have a `data`?")
+	}
+
+	secretData, ok := kv.Value.(yaml.MapSlice)
+	if !ok {
+		return fmt.Errorf("Yaml file `data` is %#v, expected MapSlice", kv.Value)
+	}
+
+	return mapAcrossData(secretData, secretDataEncoder)
+}
+
 func main() {
-	b64 := base64.StdEncoding
 
 	yamlInput, err := ioutil.ReadFile("fake-secret.yaml")
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Println("# Input yaml file:")
+	fmt.Println(string(yamlInput))
 
 	yamlData := yaml.MapSlice{}
 	err = yaml.Unmarshal(yamlInput, &yamlData)
@@ -22,56 +127,25 @@ func main() {
 		panic(err)
 	}
 
-	// Pointers so we can modify the structs in place, without keeping track of
-	// arbitrary indexes.
-	var miKind *yaml.MapItem
-	var miData *yaml.MapItem
-
-	for idx, kv := range yamlData {
-		if kv.Key == "kind" {
-			miKind = &yamlData[idx]
-		} else if kv.Key == "data" {
-			miData = &yamlData[idx]
-		}
+	err = decodeSecretData(yamlData)
+	if err != nil {
+		panic(err)
 	}
 
-	if miKind == nil {
-		panic("Yaml file does not have a `kind`?")
-	}
-	kind, ok := miKind.Value.(string)
-	if !ok {
-		panic(fmt.Sprintf("Yaml file `kind` is %#v, expected string", miKind.Value))
-	}
-	if kind != "Secret" {
-		panic(fmt.Sprintf("Yaml file `kind` is %q, expected 'Secret'", kind))
-	}
-
-	if miData == nil {
-		panic("Yaml file does not have a `data`?")
-	}
-	data, ok := miData.Value.(yaml.MapSlice)
-	if !ok {
-		panic(fmt.Sprintf("Yaml file `data` is %#v, expected MapSlice", miData.Value))
-	}
-	for idx, kv := range data {
-		secret, ok := kv.Value.(string)
-		if !ok {
-			panic(fmt.Sprintf("Secret %q is %#v, expected string", kv.Value))
-		}
-
-		decoded, err := b64.DecodeString(secret)
-		if err != nil {
-			panic(fmt.Sprintf("Secret $q is %#v, failed to decode base64", kv.Value))
-		}
-
-		// Must use idx to write, so we don't write to the copy
-		data[idx].Value = string(decoded)
-	}
-
-	fmt.Println("# Decoded yaml file:")
 	yamlOutput, err := yaml.Marshal(yamlData)
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Println("# Decoded yaml file:")
+	fmt.Println(string(yamlOutput))
+
+	encodeSecretData(yamlData)
+	yamlOutput, err = yaml.Marshal(yamlData)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("# Encoded yaml file:")
 	fmt.Println(string(yamlOutput))
 }

@@ -65,10 +65,24 @@ func secretDataEncoder(kv *yaml.MapItem) error {
 	return nil
 }
 
-// Applies a secretDataMunger to all values in data
-func mapAcrossData(data yaml.MapSlice, fn secretDataMunger) error {
-	for idx, _ := range data {
-		if err := fn(&data[idx]); err != nil {
+// Applies a secretDataMunger to all values in .data
+func processSecretsInYaml(data yaml.MapSlice, fn secretDataMunger) error {
+	if err := ensureIsSecret(data); err != nil {
+		return err
+	}
+
+	kv := findKey(data, "data")
+	if kv == nil {
+		return fmt.Errorf("Yaml file does not have a `data`?")
+	}
+
+	secretData, ok := kv.Value.(yaml.MapSlice)
+	if !ok {
+		return fmt.Errorf("Yaml file `data` is %#v, expected MapSlice", kv.Value)
+	}
+
+	for idx, _ := range secretData {
+		if err := fn(&secretData[idx]); err != nil {
 			return err
 		}
 	}
@@ -81,39 +95,11 @@ type yamlSecretFileMunger func(yaml.MapSlice) error
 
 // Decodes the data in-place. Arg is the root yaml struct.
 func decodeSecretData(data yaml.MapSlice) error {
-	if err := ensureIsSecret(data); err != nil {
-		return err
-	}
-
-	kv := findKey(data, "data")
-	if kv == nil {
-		return fmt.Errorf("Yaml file does not have a `data`?")
-	}
-
-	secretData, ok := kv.Value.(yaml.MapSlice)
-	if !ok {
-		return fmt.Errorf("Yaml file `data` is %#v, expected MapSlice", kv.Value)
-	}
-
-	return mapAcrossData(secretData, secretDataDecoder)
+	return processSecretsInYaml(data, secretDataDecoder)
 }
 
 func encodeSecretData(data yaml.MapSlice) error {
-	if err := ensureIsSecret(data); err != nil {
-		return err
-	}
-
-	kv := findKey(data, "data")
-	if kv == nil {
-		return fmt.Errorf("Yaml file does not have a `data`?")
-	}
-
-	secretData, ok := kv.Value.(yaml.MapSlice)
-	if !ok {
-		return fmt.Errorf("Yaml file `data` is %#v, expected MapSlice", kv.Value)
-	}
-
-	return mapAcrossData(secretData, secretDataEncoder)
+	return processSecretsInYaml(data, secretDataEncoder)
 }
 
 // Use KUBE_EDITOR if defined, falling back to EDITOR, then just defaulting to vi.

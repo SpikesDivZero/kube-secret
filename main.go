@@ -203,7 +203,7 @@ func main() {
 		}
 	}()
 
-	tmpFile, err := ioutil.TempFile("", "ksed")
+	tmpFile, err := ioutil.TempFile("", "ksed*.yml")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening a temporary file for writing: %s\n", err)
 		os.Exit(1)

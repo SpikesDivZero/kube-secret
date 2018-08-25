@@ -221,7 +221,7 @@ func main() {
 	}
 
 	// Okay, edit was complete, let's reopen and convert back.
-	if inFile, err = os.OpenFile(inFilename, os.O_RDWR, 0600); err != nil {
+	if inFile, err = os.OpenFile(inFilename, os.O_WRONLY|os.O_TRUNC, 0600); err != nil {
 		fmt.Fprintf(os.Stderr, "Error re-opening %s for write: %s\n", inFilename, err)
 		os.Exit(1)
 	}

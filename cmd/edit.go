@@ -30,34 +30,6 @@ func getTempFileName(dir, pattern string) (string, error) {
 	return name, nil
 }
 
-// ReadFrom, munge, WriteTo, all wrapped up in a nice tidy utility.
-func edit_readMungeWrite(inF, outF, opType string) error {
-	ksm, err := readSecretFile(inF)
-	if err != nil {
-		return err
-	}
-
-	switch opType {
-	case "encode":
-		err = ksm.EncodeSecrets()
-	case "decode":
-		err = ksm.DecodeSecrets()
-	default:
-		panic("Unknown opType: " + opType)
-	}
-	if err != nil {
-		return fmt.Errorf("Error %s secrets from %q: %s", opType, inF, err)
-	}
-
-	outFh, err := os.OpenFile(outF, os.O_WRONLY|os.O_TRUNC, 0600)
-	if err != nil {
-		return fmt.Errorf("Error opening %q for writing: %s", outF, err)
-	}
-	defer outFh.Close()
-
-	return ksm.WriteTo(outFh)
-}
-
 func runEditor(ed, f string) error {
 	cmd := exec.Command(ed, f)
 	cmd.Stdout = os.Stdout
@@ -81,7 +53,7 @@ func runEditCommand(cmd *cobra.Command, args []string) {
 	}
 	defer os.Remove(tmpF)
 
-	err = edit_readMungeWrite(inF, tmpF, "decode")
+	err = secretReadMungeWrite(inF, tmpF, "decode")
 	if err != nil {
 		errorExit(err)
 	}
@@ -91,7 +63,7 @@ func runEditCommand(cmd *cobra.Command, args []string) {
 		errorExit(err)
 	}
 
-	err = edit_readMungeWrite(inF, tmpF, "encode")
+	err = secretReadMungeWrite(inF, tmpF, "encode")
 	if err != nil {
 		errorExit(err)
 	}

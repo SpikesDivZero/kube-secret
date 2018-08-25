@@ -1,4 +1,4 @@
-# kube-secret-editor
+# kube-secret
 
 Inspired by lbolla/kube-secret-editor
 

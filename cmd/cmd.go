@@ -10,7 +10,6 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "kube-secret",
 	Short: "Making kube secret files a bit more bearable",
-	Long:  "I should put something useful here.", // TODO
 }
 
 func Execute() {

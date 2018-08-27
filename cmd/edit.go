@@ -12,7 +12,6 @@ import (
 var editCommand = &cobra.Command{
 	Use:   "edit",
 	Short: "Edit a kube secret file",
-	Long:  "I should put something useful here.", // TODO
 	Run:   runEditCommand,
 	Args:  cobra.ExactArgs(1), // [filename.yml]
 }

@@ -10,7 +10,6 @@ import (
 var decodeCommand = &cobra.Command{
 	Use:   "decode",
 	Short: "Decode a kube secret file",
-	Long:  "I should put something useful here.", // TODO
 	Run:   runDecodeCommand,
 	Args:  cobra.ExactArgs(1), // [filename.yml]
 }

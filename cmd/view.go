@@ -10,7 +10,6 @@ import (
 var viewCommand = &cobra.Command{
 	Use:   "view",
 	Short: "view a kube secret file",
-	Long:  "I should put something useful here.", // TODO
 	Run:   runViewCommand,
 	Args:  cobra.ExactArgs(1), // [filename.yml]
 }

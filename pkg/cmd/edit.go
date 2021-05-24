@@ -62,7 +62,7 @@ func runEditCommand(cmd *cobra.Command, args []string) {
 		errorExit(err)
 	}
 
-	err = secretReadMungeWrite(inF, tmpF, "encode")
+	err = secretReadMungeWrite(tmpF, inF, "encode")
 	if err != nil {
 		errorExit(err)
 	}

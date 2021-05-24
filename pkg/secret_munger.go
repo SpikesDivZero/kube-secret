@@ -103,7 +103,7 @@ func (k *kubeSecretMunger) WriteTo(w io.Writer) error {
 
 // Returns a pointer to the MapItem with the corresponding Key.
 func findKey(ms yaml.MapSlice, key string) *yaml.MapItem {
-	for idx, _ := range ms {
+	for idx := range ms {
 		kv := &ms[idx]
 		if kv.Key == key {
 			return kv
@@ -134,12 +134,12 @@ type secretDataMunger func(kv *yaml.MapItem) error
 func secretDataDecoder(kv *yaml.MapItem) error {
 	secret, ok := kv.Value.(string)
 	if !ok {
-		return fmt.Errorf("Secret %q is %#v, expected string", kv.Value)
+		return fmt.Errorf("Secret %q is %#v, expected string", kv.Key, kv.Value)
 	}
 
 	decoded, err := base64.StdEncoding.DecodeString(secret)
 	if err != nil {
-		return fmt.Errorf("Secret $q is %#v, failed to decode base64", kv.Value)
+		return fmt.Errorf("Secret %q is %#v, failed to decode base64", kv.Key, kv.Value)
 	}
 
 	kv.Value = string(decoded)
@@ -149,8 +149,10 @@ func secretDataDecoder(kv *yaml.MapItem) error {
 func secretDataEncoder(kv *yaml.MapItem) error {
 	secret, ok := kv.Value.(string)
 	if !ok {
-		return fmt.Errorf("Secret %q is %#v, expected string", kv.Value)
+		return fmt.Errorf("Secret %q is %#v, expected string", kv.Key, kv.Value)
 	}
+
+	fmt.Printf("Secret %q is %#v\n", kv.Key, kv.Value)
 
 	kv.Value = base64.StdEncoding.EncodeToString([]byte(secret))
 	return nil
@@ -168,7 +170,7 @@ func processSecretsInYaml(data yaml.MapSlice, fn secretDataMunger) error {
 		return fmt.Errorf("Yaml file `data` is %#v, expected MapSlice", kv.Value)
 	}
 
-	for idx, _ := range secretData {
+	for idx := range secretData {
 		if err := fn(&secretData[idx]); err != nil {
 			return err
 		}

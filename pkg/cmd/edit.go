@@ -66,8 +66,6 @@ func runEditCommand(cmd *cobra.Command, args []string) {
 	if err != nil {
 		errorExit(err)
 	}
-
-	fmt.Fprintln(os.Stderr, "All done!")
 }
 
 func init() {

@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
 )
 
@@ -21,8 +18,6 @@ func runEncodeCommand(cmd *cobra.Command, args []string) {
 	if err != nil {
 		errorExit(err)
 	}
-
-	fmt.Fprintln(os.Stderr, "All done!")
 }
 
 func init() {

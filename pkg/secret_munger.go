@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -9,23 +10,33 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// KubeSecretMunger acts as a wrapper to encode or decode the base64-encoded data inside of a YAML-encoded secret.
+//
+// Generally, the usage is something like:
+//
+//     k := NewKubeSecretMunger()
+//     k.ReadFrom(reader)
+//     k.DecodeSecrets()  // Or encode
+//     k.WriteTo(writer)
 type KubeSecretMunger interface {
 	SetDebug(bool)
 
-	// Use this first to read in data
+	// Use this first to read in data.
 	ReadFrom(io.Reader) error
 
 	// Either encode or decode the b64 secrets, in-place.
 	EncodeSecrets() error
 	DecodeSecrets() error
 
-	// Then write your data out somewhere
+	// Then write your data out somewhere.
 	WriteTo(io.Writer) error
 }
 
 type kubeSecretMunger struct {
 	debug bool
 
+	// We use MapSlice here as we want to preserve the order of all keys in a loaded kube yaml file. While kubectl might
+	// not care about the order of lines changing, git does and I'd prefer not to have non-op edits in the history.
 	data       yaml.MapSlice
 	dataLoaded bool
 }
@@ -38,8 +49,8 @@ func (k *kubeSecretMunger) SetDebug(d bool) {
 	k.debug = d
 }
 
-// Reads in and unmarshals the YAML. If we hit an error, or the file is not a
-// secret (as indicated by `kind: Secret`), then we return an error.
+// Reads in and unmarshals the YAML. If we hit an error, or the file is not a secret (as indicated by `kind: Secret`),
+// then we return an error.
 func (k *kubeSecretMunger) ReadFrom(r io.Reader) error {
 	yamlInStr, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -115,7 +126,7 @@ func findKey(ms yaml.MapSlice, key string) *yaml.MapItem {
 func (k *kubeSecretMunger) ensureIsSecret() error {
 	kv := findKey(k.data, "kind")
 	if kv == nil {
-		return fmt.Errorf("Yaml file does not have a `kind`")
+		return errors.New("Yaml file does not have a `kind`")
 	}
 
 	kind, ok := kv.Value.(string)
@@ -139,7 +150,7 @@ func secretDataDecoder(kv *yaml.MapItem) error {
 
 	decoded, err := base64.StdEncoding.DecodeString(secret)
 	if err != nil {
-		return fmt.Errorf("Secret %q is %#v, failed to decode base64", kv.Key, kv.Value)
+		return fmt.Errorf("Secret %q is %#v, failed to decode base64: %w", kv.Key, kv.Value, err)
 	}
 
 	kv.Value = string(decoded)
@@ -152,8 +163,6 @@ func secretDataEncoder(kv *yaml.MapItem) error {
 		return fmt.Errorf("Secret %q is %#v, expected string", kv.Key, kv.Value)
 	}
 
-	fmt.Printf("Secret %q is %#v\n", kv.Key, kv.Value)
-
 	kv.Value = base64.StdEncoding.EncodeToString([]byte(secret))
 	return nil
 }
@@ -162,7 +171,8 @@ func secretDataEncoder(kv *yaml.MapItem) error {
 func processSecretsInYaml(data yaml.MapSlice, fn secretDataMunger) error {
 	kv := findKey(data, "data")
 	if kv == nil {
-		return fmt.Errorf("Yaml file does not have a `data`?")
+		// If there's no data key, then there's nothing for us to deobfuscate. (Could be stringData)
+		return nil
 	}
 
 	secretData, ok := kv.Value.(yaml.MapSlice)

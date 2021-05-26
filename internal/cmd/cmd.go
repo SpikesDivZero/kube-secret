@@ -39,8 +39,7 @@ func Execute() {
 	}
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprint(os.Stderr, err)
-		fmt.Fprint(os.Stderr, "\n")
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }

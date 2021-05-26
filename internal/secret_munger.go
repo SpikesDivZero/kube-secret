@@ -1,4 +1,4 @@
-package pkg
+package internal
 
 import (
 	"encoding/base64"
@@ -126,15 +126,15 @@ func findKey(ms yaml.MapSlice, key string) *yaml.MapItem {
 func (k *kubeSecretMunger) ensureIsSecret() error {
 	kv := findKey(k.data, "kind")
 	if kv == nil {
-		return errors.New("Yaml file does not have a `kind`")
+		return errors.New("yaml does not have a `kind`")
 	}
 
 	kind, ok := kv.Value.(string)
 	if !ok {
-		return fmt.Errorf("Yaml file `kind` is %#v, expected string", kv.Value)
+		return fmt.Errorf("yaml `kind` is %#v, expected string", kv.Value)
 	}
 	if kind != "Secret" {
-		return fmt.Errorf("Yaml file `kind` is %q, expected 'Secret'", kind)
+		return fmt.Errorf("yaml `kind` is %q, expected 'Secret'", kind)
 	}
 	return nil
 }
@@ -145,12 +145,12 @@ type secretDataMunger func(kv *yaml.MapItem) error
 func secretDataDecoder(kv *yaml.MapItem) error {
 	secret, ok := kv.Value.(string)
 	if !ok {
-		return fmt.Errorf("Secret %q is %#v, expected string", kv.Key, kv.Value)
+		return fmt.Errorf("secret %q is %#v, expected string", kv.Key, kv.Value)
 	}
 
 	decoded, err := base64.StdEncoding.DecodeString(secret)
 	if err != nil {
-		return fmt.Errorf("Secret %q is %#v, failed to decode base64: %w", kv.Key, kv.Value, err)
+		return fmt.Errorf("secret %q is %#v, failed to decode base64: %w", kv.Key, kv.Value, err)
 	}
 
 	kv.Value = string(decoded)
@@ -160,7 +160,7 @@ func secretDataDecoder(kv *yaml.MapItem) error {
 func secretDataEncoder(kv *yaml.MapItem) error {
 	secret, ok := kv.Value.(string)
 	if !ok {
-		return fmt.Errorf("Secret %q is %#v, expected string", kv.Key, kv.Value)
+		return fmt.Errorf("secret %q is %#v, expected string", kv.Key, kv.Value)
 	}
 
 	kv.Value = base64.StdEncoding.EncodeToString([]byte(secret))
@@ -177,7 +177,7 @@ func processSecretsInYaml(data yaml.MapSlice, fn secretDataMunger) error {
 
 	secretData, ok := kv.Value.(yaml.MapSlice)
 	if !ok {
-		return fmt.Errorf("Yaml file `data` is %#v, expected MapSlice", kv.Value)
+		return fmt.Errorf("yaml file `data` is %#v, expected MapSlice", kv.Value)
 	}
 
 	for idx := range secretData {

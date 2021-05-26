@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spikesdivzero/kube-secret/pkg"
+	"github.com/spikesdivzero/kube-secret/internal"
 )
 
 func errorExit(err error) {
@@ -12,8 +12,8 @@ func errorExit(err error) {
 	os.Exit(1)
 }
 
-func readSecretFile(f string) (pkg.KubeSecretMunger, error) {
-	ksm := pkg.NewKubeSecretMunger()
+func readSecretFile(f string) (internal.KubeSecretMunger, error) {
+	ksm := internal.NewKubeSecretMunger()
 	ksm.SetDebug(debug) // from rootCmd
 
 	inFile, err := os.Open(f)
@@ -30,7 +30,7 @@ func readSecretFile(f string) (pkg.KubeSecretMunger, error) {
 	return ksm, nil
 }
 
-func writeSecretFile(f string, ksm pkg.KubeSecretMunger) error {
+func writeSecretFile(f string, ksm internal.KubeSecretMunger) error {
 	fh, err := os.OpenFile(f, os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
 		return fmt.Errorf("Error opening %q for writing: %s", f, err)

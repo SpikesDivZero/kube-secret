@@ -14,7 +14,6 @@ func errorExit(err error) {
 
 func readSecretFile(f string) (internal.KubeSecretMunger, error) {
 	ksm := internal.NewKubeSecretMunger()
-	ksm.SetDebug(debug) // from rootCmd
 
 	inFile, err := os.Open(f)
 	if err != nil {

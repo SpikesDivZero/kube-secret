@@ -43,9 +43,3 @@ func Execute() {
 		os.Exit(1)
 	}
 }
-
-var debug bool
-
-func init() {
-	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debugging output")
-}

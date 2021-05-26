@@ -10,6 +10,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+var ErrDataNotLoaded = errors.New("invalid state: data not loaded")
+
 // KubeSecretMunger acts as a wrapper to encode or decode the base64-encoded data inside of a YAML-encoded secret.
 //
 // Generally, the usage is something like:
@@ -19,8 +21,6 @@ import (
 //     k.DecodeSecrets()  // Or encode
 //     k.WriteTo(writer)
 type KubeSecretMunger interface {
-	SetDebug(bool)
-
 	// Use this first to read in data.
 	ReadFrom(io.Reader) error
 
@@ -33,8 +33,6 @@ type KubeSecretMunger interface {
 }
 
 type kubeSecretMunger struct {
-	debug bool
-
 	// We use MapSlice here as we want to preserve the order of all keys in a loaded kube yaml file. While kubectl might
 	// not care about the order of lines changing, git does and I'd prefer not to have non-op edits in the history.
 	data       yaml.MapSlice
@@ -43,10 +41,6 @@ type kubeSecretMunger struct {
 
 func NewKubeSecretMunger() KubeSecretMunger {
 	return &kubeSecretMunger{}
-}
-
-func (k *kubeSecretMunger) SetDebug(d bool) {
-	k.debug = d
 }
 
 // Reads in and unmarshals the YAML. If we hit an error, or the file is not a secret (as indicated by `kind: Secret`),
@@ -74,7 +68,7 @@ func (k *kubeSecretMunger) ReadFrom(r io.Reader) error {
 
 func (k *kubeSecretMunger) EncodeSecrets() error {
 	if !k.dataLoaded {
-		panic("Invalid State: Data not loaded")
+		return ErrDataNotLoaded
 	}
 
 	return processSecretsInYaml(k.data, secretDataEncoder)
@@ -82,7 +76,7 @@ func (k *kubeSecretMunger) EncodeSecrets() error {
 
 func (k *kubeSecretMunger) DecodeSecrets() error {
 	if !k.dataLoaded {
-		panic("Invalid State: Data not loaded")
+		return ErrDataNotLoaded
 	}
 
 	return processSecretsInYaml(k.data, secretDataDecoder)
@@ -90,7 +84,7 @@ func (k *kubeSecretMunger) DecodeSecrets() error {
 
 func (k *kubeSecretMunger) WriteTo(w io.Writer) error {
 	if !k.dataLoaded {
-		panic("Invalid State: Data not loaded")
+		return ErrDataNotLoaded
 	}
 
 	yamlOutStr, err := yaml.Marshal(k.data)

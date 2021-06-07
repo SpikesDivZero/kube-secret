@@ -12,7 +12,7 @@ Inspired by [lbolla/kube-secret-editor](https://github.com/lbolla/kube-secret-ed
 
 ## Overview
 
-**Installation:** Assuming your environment is configured for go development (PATH included), then kube-secret can be
+**Installation:** Assuming your environment is configured for go development (`PATH` included), then kube-secret can be
 installed via:
 
     go install github.com/spikesdivzero/kube-secret@latest
@@ -27,16 +27,16 @@ When invoked, it'll do the following:
 * Invoke `$EDITOR` on the decoded secret file
 * Encode the updated secrets as base64 again to keep k8s happy.
 
-**Usage w/ kubectl:** To use kube-secret with `kubectl`, you'll want to set up a wrapping alias, akin to:
+**Usage with kubectl:** To use kube-secret with `kubectl`, you'll want to set up a wrapping alias, akin to:
 
     alias kedit-secret="KUBE_EDITOR='kube-secret' kubectl edit secret"
 
 Editing a secret becomes as easy as "kedit-secret secrets/my-secret".
 
-You might have noticed that KUBE_EDITOR in that alias doesn't include the "edit" verb. If kube-secret is invoked with
+You might have noticed that `KUBE_EDITOR` in that alias doesn't include the "edit" verb. If kube-secret is invoked with
 a filename as the first argument, then it assumes the intended usage was "kube-secret edit".
 
 ## Notes
 
-* If EDITOR is not configured in your user's environment, then kube-secret defaults to `vi`.
+* If `EDITOR` is not configured in your user's environment, then kube-secret defaults to `vi`.
 * Any time you're working with secrets, your environment should be configured for full-disk encryption.
